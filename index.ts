@@ -30,19 +30,24 @@ const getTvTimeShows = async (
     }
   );
 
-  return showsResponse.data.data.objects
+  const shows = showsResponse.data.data.objects
     .filter((o: any) => o.filter.includes(filter))
     .map((o: any) => ({
       name: o.meta.name,
       tvdbId: o.meta.id,
       filter: o.filter,
     }));
+
+  console.log(`Returning ${shows.length} shows for filter '${filter}'`);
+
+  return shows;
 };
 
 const { TVTIME_USERNAME, TVTIME_PASSWORD } = process.env;
 
 if (!TVTIME_USERNAME || !TVTIME_PASSWORD) {
-  throw new Error("TVTIME_USERNAME and TVTIME_PASSWORD are required");
+  console.error("TVTIME_USERNAME and TVTIME_PASSWORD env vars are required");
+  process.exit(1);
 }
 
 new Elysia()
@@ -50,3 +55,5 @@ new Elysia()
     getTvTimeShows(TVTIME_USERNAME, TVTIME_PASSWORD, req.params.filter)
   )
   .listen(3000);
+
+console.log("Server listening on port 3000");
