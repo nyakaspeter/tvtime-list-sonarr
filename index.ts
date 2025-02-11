@@ -62,17 +62,17 @@ const getTvTimeShows = async (
   return shows;
 };
 
-const { TVTIME_USERNAME, TVTIME_PASSWORD } = process.env;
+const { TVTIME_EMAIL, TVTIME_PASSWORD } = process.env;
 
-if (!TVTIME_USERNAME || !TVTIME_PASSWORD) {
-  console.error("TVTIME_USERNAME and TVTIME_PASSWORD env vars are required");
+if (!TVTIME_EMAIL || !TVTIME_PASSWORD) {
+  console.error("TVTIME_EMAIL and TVTIME_PASSWORD env vars are required");
   process.exit(1);
 }
 
 new Elysia({ serve: { idleTimeout: 30 } })
-  .get("/shows", () => getTvTimeShows(TVTIME_USERNAME, TVTIME_PASSWORD))
+  .get("/shows", () => getTvTimeShows(TVTIME_EMAIL, TVTIME_PASSWORD))
   .get("/shows/:filter", (req) =>
-    getTvTimeShows(TVTIME_USERNAME, TVTIME_PASSWORD, req.params.filter)
+    getTvTimeShows(TVTIME_EMAIL, TVTIME_PASSWORD, req.params.filter)
   )
   .listen(3000);
 
