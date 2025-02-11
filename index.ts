@@ -1,11 +1,11 @@
 import axios from "axios";
 import Elysia from "elysia";
 
-// Available filters: "all", "watch_later", "not_started_yet", "stopped", "continuing", "up_to_date"
+// Available filters: "watching", "not_started_yet", "for_later", "up_to_date", "finished", "stopped_watching", "all_time_favorites"
 const getTvTimeShows = async (
   username: string,
   password: string,
-  filter: string
+  filter?: string
 ) => {
   const loginTokensResponse = await axios.post(
     "https://app.tvtime.com/sidecar?o=https%3A%2F%2Fapi2.tozelabs.com%2Fv2%2Fuser"
@@ -21,24 +21,43 @@ const getTvTimeShows = async (
     }
   );
 
+  const { id, jwt_token } = accessTokensResponse.data.data;
+
+  const apiUrl = `https://api2.tozelabs.com/v2/user/${id}&fields=shows.fields(id,name,filters,watched_episode_count,aired_episode_count,status,is_followed,is_up_to_date,is_archived,is_for_later,is_favorite).offset(0).limit(500)`;
+
   const showsResponse = await axios.get(
-    "https://app.tvtime.com/sidecar?o=https%3A%2F%2Fmsapi.tvtime.com%2Fprod%2Fv1%2Ftracking%2Fcgw%2Ffollows%2Fuser%2F14739871&entity_type=series",
+    `https://app.tvtime.com/sidecar?o=${encodeURI(apiUrl)}`,
     {
       headers: {
-        Authorization: `Bearer ${accessTokensResponse.data.data.jwt_token}`,
+        Authorization: `Bearer ${jwt_token}`,
       },
     }
   );
 
-  const shows = showsResponse.data.data.objects
-    .filter((o: any) => o.filter.includes(filter))
-    .map((o: any) => ({
-      name: o.meta.name,
-      tvdbId: o.meta.id,
-      filter: o.filter,
+  const shows = showsResponse.data.shows
+    .filter(
+      (s: any) =>
+        !filter ||
+        s.filters.find((f: any) => f.id === "progress").values.includes(filter)
+    )
+    .map((s: any) => ({
+      name: s.name,
+      tvdbId: s.id,
+      watched_episode_count: s.watched_episode_count,
+      aired_episode_count: s.aired_episode_count,
+      status: s.status,
+      is_followed: s.is_followed,
+      is_up_to_date: s.is_up_to_date,
+      is_archived: s.is_archived,
+      is_for_later: s.is_for_later,
+      is_favorite: s.is_favorite,
     }));
 
-  console.log(`Returning ${shows.length} shows for filter '${filter}'`);
+  if (filter) {
+    console.log(`Returning ${shows.length} shows for filter '${filter}'`);
+  } else {
+    console.log(`Returning all ${shows.length} shows`);
+  }
 
   return shows;
 };
@@ -50,7 +69,8 @@ if (!TVTIME_USERNAME || !TVTIME_PASSWORD) {
   process.exit(1);
 }
 
-new Elysia()
+new Elysia({ serve: { idleTimeout: 30 } })
+  .get("/shows", () => getTvTimeShows(TVTIME_USERNAME, TVTIME_PASSWORD))
   .get("/shows/:filter", (req) =>
     getTvTimeShows(TVTIME_USERNAME, TVTIME_PASSWORD, req.params.filter)
   )
